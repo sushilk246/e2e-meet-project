@@ -53,3 +53,4 @@ PLAN.md
 PROGRESS.md
 TECHNICAL.md
 project_env/*
+!project_env/.gitkeep
