@@ -31,7 +31,7 @@ sk_meet_work/
 ├── PLAN.md             ← full build plan
 ├── PROGRESS.md         ← phase checklist
 ├── TECHNICAL.md        ← live architectural reference
-├── env_file/           ← Python virtualenv (gitignored)
+├── project_env/        ← Python virtualenv (checked into the repo)
 └── e2e_meet/           ← Django project
     ├── manage.py
     ├── e2e_meet/       ← project package (settings, asgi, urls)
@@ -56,10 +56,11 @@ brew services list | grep redis   # confirm it's up
 
 ```bash
 # from the workspace root
-source env_file/bin/activate          # activate the virtualenv
+python3 -m venv project_env            # create the virtualenv (first time only)
+source project_env/bin/activate        # activate it
 
 cd e2e_meet
-pip install -r requirements.txt        # if present
+pip install -r requirements.txt        # install dependencies
 python manage.py migrate
 python manage.py createsuperuser       # optional, for /admin
 ```
