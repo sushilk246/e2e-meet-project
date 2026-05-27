@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · e2e_meet{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="dash-grid">
+    <section class="card">
+        <h2>Start a meeting</h2>
+        <form method="post" action="{% url 'meetings:create' %}">
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_name">Room name (optional)</label>
+                <input type="text" name="name" id="id_name" maxlength="120" placeholder="Weekly sync">
+            </div>
+            <button type="submit">Create room</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Join with code</h2>
+        <form method="post" action="{% url 'meetings:join' %}">
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_code">Room code</label>
+                <input type="text" name="code" id="id_code" required>
+            </div>
+            <button type="submit">Join</button>
+        </form>
+    </section>
+</div>
+
+<section class="card recent">
+    <h2>Recent rooms</h2>
+    {% if recent_rooms %}
+        <ul class="room-list">
+            {% for r in recent_rooms %}
+                <li>
+                    <a href="{% url 'meetings:room' code=r.code %}">{{ r }}</a>
+                    <span class="meta">code <code>{{ r.code }}</code> · host {{ r.host.username }} · {{ r.created_at|date:"Y-m-d H:i" }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">No rooms yet. Create one above or join with a code.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ room }} · e2e_meet{% endblock %}
+
+{% block content %}
+<div class="room" data-room-code="{{ room.code }}">
+
+    <header class="room-topbar">
+        <div class="room-id">
+            <h1>{{ room }}</h1>
+            <p class="meta">code <code>{{ room.code }}</code> · host {{ room.host.username }}</p>
+        </div>
+        <button type="button" class="btn-ghost" id="copy-code" data-code="{{ room.code }}">Copy code</button>
+    </header>
+
+    <main class="stage">
+
+        <!--
+            Video tile grid. Phase 5 attaches local <video> here; Phase 7 adds
+            remote tiles. The container's data-tile-count drives the grid layout
+            (1, 2, 3-4, 5-6 → different column rules). For Phase 4 we render a
+            single placeholder tile so the shell is visible.
+        -->
+        <section class="tile-grid" id="tile-grid" data-tile-count="1">
+            <div class="tile" data-peer="local">
+                <video class="tile-video" autoplay muted playsinline></video>
+                <div class="tile-placeholder">
+                    <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
+                    <span class="tile-label">{{ user.username }} (you)</span>
+                </div>
+                <div class="tile-badge"><span class="dot dot-mic"></span> {{ user.username }}</div>
+            </div>
+        </section>
+
+        <!--
+            Slide-in chat panel. Toggled by the chat button in the control bar.
+            Phase 8 wires the WS chat-message handlers; for now this is shell only.
+        -->
+        <aside class="chat-panel" id="chat-panel" aria-hidden="true">
+            <header class="chat-panel-header">
+                <h2>Chat</h2>
+                <button type="button" class="btn-ghost" id="chat-close" aria-label="Close chat">✕</button>
+            </header>
+            <ul class="chat-messages" id="chat-messages">
+                {% for m in history %}
+                    <li class="chat-msg">
+                        <div class="chat-msg-meta">
+                            <strong>{{ m.author.username }}</strong>
+                            <span>{{ m.created_at|date:"H:i" }}</span>
+                        </div>
+                        <div class="chat-msg-body">{{ m.body }}</div>
+                    </li>
+                {% empty %}
+                    <li class="chat-empty">No messages yet.</li>
+                {% endfor %}
+            </ul>
+            <form class="chat-form" id="chat-form">
+                <input type="text" id="chat-input" placeholder="Type a message…" autocomplete="off" disabled>
+                <button type="submit" disabled>Send</button>
+            </form>
+        </aside>
+
+    </main>
+
+    <!--
+        Control bar. All buttons are inert in Phase 4 except #toggle-chat.
+        Phase 5 wires mic/cam/share to MediaStreamTrack toggles.
+    -->
+    <footer class="controls">
+        <button type="button" class="ctrl" id="toggle-mic" data-state="on" disabled title="Phase 5">
+            <span class="ctrl-icon">🎙</span><span class="ctrl-label">Mute</span>
+        </button>
+        <button type="button" class="ctrl" id="toggle-cam" data-state="on" disabled title="Phase 5">
+            <span class="ctrl-icon">📷</span><span class="ctrl-label">Camera</span>
+        </button>
+        <button type="button" class="ctrl" id="toggle-share" data-state="off" disabled title="Phase 5">
+            <span class="ctrl-icon">🖥</span><span class="ctrl-label">Share</span>
+        </button>
+        <button type="button" class="ctrl" id="toggle-chat">
+            <span class="ctrl-icon">💬</span><span class="ctrl-label">Chat</span>
+        </button>
+        <a href="{% url 'meetings:dashboard' %}" class="ctrl ctrl-leave">
+            <span class="ctrl-icon">⏻</span><span class="ctrl-label">Leave</span>
+        </a>
+    </footer>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/room.js' %}" defer></script>
+<script src="{% static 'js/chat.js' %}" defer></script>
+{% endblock %}
