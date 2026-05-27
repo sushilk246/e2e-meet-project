@@ -25,7 +25,7 @@ mesh (peer-to-peer, no media server), with real-time text chat alongside the cal
 ## Project layout
 
 ```
-sk_meet_work/
+e2e-meet-project/
 ├── README.md           ← this file
 ├── CLAUDE.md           ← agent / contributor notes
 ├── PLAN.md             ← full build plan
