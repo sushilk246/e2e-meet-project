@@ -80,9 +80,3 @@ in two browser windows (or two devices on the same LAN).
 > `stun:stun.l.google.com:19302` to `RTC_CONFIG` in
 > `e2e_meet/static/js/room.js` — it's a one-line change.
 
-## Documentation
-
-- **PLAN.md** — the original full build plan
-- **PROGRESS.md** — phase-by-phase checklist (all 8 phases complete)
-- **TECHNICAL.md** — data model, routes, ASGI wiring, WebRTC plan (kept current)
-- **CLAUDE.md** — conventions and resume runbook for contributors / agents
