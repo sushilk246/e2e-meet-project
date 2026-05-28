@@ -4,7 +4,10 @@
 {% block title %}{{ room }} · e2e_meet{% endblock %}
 
 {% block content %}
-<div class="room" data-room-code="{{ room.code }}">
+<div class="room"
+     data-room-code="{{ room.code }}"
+     data-is-host="{% if is_host %}1{% else %}0{% endif %}"
+     data-display-name="{{ display_name }}">
 
     <header class="room-topbar">
         <div class="room-id">
@@ -13,6 +16,31 @@
         </div>
         <button type="button" class="btn-ghost" id="copy-code" data-code="{{ room.code }}">Copy code</button>
     </header>
+
+    <!--
+        Waiting overlay (Phase 13). Shown for any non-host joiner until the
+        host clicks Admit. Hidden immediately for hosts (and for non-hosts once
+        the server sends `admitted`). Rendered visible-by-default for non-hosts
+        so there's no flash of the call UI before WS opens.
+    -->
+    {% if not is_host %}
+        <div id="waiting-overlay" class="waiting-overlay" aria-live="polite">
+            <div class="waiting-card">
+                <div class="waiting-spinner" aria-hidden="true"></div>
+                <h2>Waiting for the host…</h2>
+                <p class="muted">Your name is <strong>{{ display_name }}</strong>. The host has been notified.</p>
+            </div>
+        </div>
+    {% endif %}
+
+    <!--
+        Knock tray (Phase 13, host-only). One card per pending knocker is
+        appended here from room.js — Admit / Deny send `admit` / `deny`
+        over the WS.
+    -->
+    {% if is_host %}
+        <div id="knock-tray" class="knock-tray" aria-live="polite"></div>
+    {% endif %}
 
     <main class="stage">
 
@@ -26,12 +54,30 @@
             <div class="tile" data-peer="local">
                 <video class="tile-video" autoplay muted playsinline></video>
                 <div class="tile-placeholder">
-                    <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
-                    <span class="tile-label">{{ user.username }} (you)</span>
+                    <span class="avatar">{{ display_name|slice:":1"|upper }}</span>
+                    <span class="tile-label">{{ display_name }} (you)</span>
                 </div>
-                <div class="tile-badge"><span class="dot dot-mic"></span> {{ user.username }}</div>
+                <div class="tile-badge"><span class="dot dot-mic"></span> {{ display_name }}</div>
             </div>
         </section>
+
+        <!--
+            Slide-in people panel. Populated from the server's `roster` frame
+            on connect, then kept in sync via peer-joined / peer-left.
+        -->
+        <aside class="people-panel" id="people-panel" aria-hidden="true">
+            <header class="chat-panel-header">
+                <h2>People <span class="people-count" id="people-count">1</span></h2>
+                <button type="button" class="btn-ghost" id="people-close" aria-label="Close people">✕</button>
+            </header>
+            <ul class="people-list" id="people-list">
+                {# Self entry is rendered upfront so the panel isn't empty before WS opens. #}
+                <li class="people-item" data-peer="local">
+                    <span class="avatar">{{ display_name|slice:":1"|upper }}</span>
+                    <span class="people-name">{{ display_name }} <span class="people-you">(you)</span></span>
+                </li>
+            </ul>
+        </aside>
 
         <!--
             Slide-in chat panel. Toggled by the chat button in the control bar.
@@ -77,9 +123,22 @@
         <button type="button" class="ctrl" id="toggle-share" data-state="off" disabled title="Phase 5">
             <span class="ctrl-icon">🖥</span><span class="ctrl-label">Share</span>
         </button>
+        <button type="button" class="ctrl" id="toggle-people">
+            <span class="ctrl-icon">👥</span><span class="ctrl-label">People</span>
+        </button>
         <button type="button" class="ctrl" id="toggle-chat">
             <span class="ctrl-icon">💬</span><span class="ctrl-label">Chat</span>
         </button>
+        {% if is_host %}
+            <form method="post" action="{% url 'meetings:delete' code=room.code %}"
+                  class="inline-form ctrl-end-form"
+                  onsubmit="return confirm('End this meeting for everyone?');">
+                {% csrf_token %}
+                <button type="submit" class="ctrl ctrl-end">
+                    <span class="ctrl-icon">⏹</span><span class="ctrl-label">End meeting</span>
+                </button>
+            </form>
+        {% endif %}
         <a href="{% url 'meetings:dashboard' %}" class="ctrl ctrl-leave">
             <span class="ctrl-icon">⏻</span><span class="ctrl-label">Leave</span>
         </a>

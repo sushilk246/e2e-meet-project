@@ -80,3 +80,133 @@ in two browser windows (or two devices on the same LAN).
 > `stun:stun.l.google.com:19302` to `RTC_CONFIG` in
 > `e2e_meet/static/js/room.js` — it's a one-line change.
 
+## CentOS Stream VM setup
+
+End-to-end install on a fresh CentOS Stream 9 VM.
+
+### 1. System update + essentials
+
+```bash
+sudo dnf update -y
+sudo dnf install -y git curl wget vim policycoreutils-python-utils
+sudo dnf groupinstall -y "Development Tools"
+```
+
+### 2. Install Python 3.12 (Django 5.2 needs Python 3.10+)
+
+```bash
+sudo dnf install -y python3.12 python3.12-pip python3.12-devel
+python3.12 --version
+```
+
+### 3. Install Redis (required by Django Channels)
+
+```bash
+sudo dnf install -y redis
+sudo systemctl enable --now redis
+redis-cli ping        # should print PONG
+```
+
+### 4. Install build dependencies (for cryptography / cffi wheels)
+
+```bash
+sudo dnf install -y gcc openssl-devel libffi-devel rust cargo
+```
+
+### 5. Clone the project
+
+```bash
+mkdir -p ~/sk_meet_work && cd ~/sk_meet_work
+git clone <your-repo-url> e2e_meet
+```
+
+### 6. Create the virtualenv
+
+```bash
+cd ~/sk_meet_work
+python3.12 -m venv project_env
+source project_env/bin/activate
+pip install --upgrade pip setuptools wheel
+```
+
+### 7. Install Python dependencies
+
+```bash
+cd ~/sk_meet_work/e2e_meet
+pip install -r requirements.txt
+```
+
+### 8. Django setup
+
+```bash
+cd ~/sk_meet_work/e2e_meet
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py collectstatic --noinput
+```
+
+### 9. Open the firewall for port 8000
+
+```bash
+sudo firewall-cmd --permanent --add-port=8000/tcp
+sudo firewall-cmd --reload
+```
+
+### 10. Allow SELinux to bind the port (if SELinux is enforcing)
+
+```bash
+sudo semanage port -a -t http_port_t -p tcp 8000 || \
+sudo semanage port -m -t http_port_t -p tcp 8000
+```
+
+### 11. Run the server
+
+```bash
+cd ~/sk_meet_work/e2e_meet
+source ../project_env/bin/activate
+daphne -b 0.0.0.0 -p 8000 e2e_meet.asgi:application
+```
+
+Open `http://<vm-ip>:8000/` in a browser.
+
+### Optional: run as a systemd service
+
+Create `/etc/systemd/system/e2e_meet.service`:
+
+```ini
+[Unit]
+Description=e2e_meet Daphne ASGI server
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+User=<your-user>
+WorkingDirectory=/home/<your-user>/sk_meet_work/e2e_meet
+Environment="PATH=/home/<your-user>/sk_meet_work/project_env/bin"
+ExecStart=/home/<your-user>/sk_meet_work/project_env/bin/daphne -b 0.0.0.0 -p 8000 e2e_meet.asgi:application
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start it:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now e2e_meet
+sudo journalctl -u e2e_meet -f
+```
+
+### HTTPS note (required for WebRTC outside localhost)
+
+Browsers block `getUserMedia` (camera/mic) on non-localhost origins unless the
+page is served over HTTPS. Two easy options:
+
+- **Cloudflare Tunnel** — `CSRF_TRUSTED_ORIGINS` already allows `*.trycloudflare.com`:
+  ```bash
+  sudo dnf install -y https://pkg.cloudflare.com/cloudflared-stable-linux-x86_64.rpm
+  cloudflared tunnel --url http://localhost:8000
+  ```
+- **nginx + Let's Encrypt** in front of Daphne (proxy `/` and upgrade `/ws/` to WebSocket).
+

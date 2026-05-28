@@ -31,15 +31,10 @@
     }
     setEnabled(false);
 
-    // Hook into the existing signaling module's `ws` lifecycle. We don't have
-    // direct access to it, so we poll once on a short interval until it opens.
-    const interval = setInterval(() => {
-        // signaling.peerId is null until the `hello` message arrives.
-        if (signaling.peerId) {
-            setEnabled(true);
-            clearInterval(interval);
-        }
-    }, 100);
+    // Enable on the `roster` event — sent only after admission (Phase 13).
+    // Pending knockers see `hello` early but no roster, so chat stays disabled
+    // for them until the host admits.
+    signaling.on("roster", () => setEnabled(true));
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();

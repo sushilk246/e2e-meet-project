@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Message, Room
+from .models import Message, Participation, Room
 
 
 @admin.register(Room)
@@ -19,3 +19,10 @@ class MessageAdmin(admin.ModelAdmin):
     @admin.display(description="body")
     def short_body(self, obj):
         return obj.body[:60]
+
+
+@admin.register(Participation)
+class ParticipationAdmin(admin.ModelAdmin):
+    list_display = ("room", "user", "guest_name", "joined_at")
+    list_filter = ("room",)
+    search_fields = ("user__username", "guest_name", "room__code")

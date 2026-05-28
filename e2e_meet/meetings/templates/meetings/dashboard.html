@@ -1,22 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard · e2e_meet{% endblock %}
+{% block title %}{% if user.is_authenticated %}Dashboard{% else %}e2e_meet{% endif %}{% endblock %}
 
 {% block content %}
-<h1>Dashboard</h1>
+{% if user.is_authenticated %}
+    <h1>Dashboard</h1>
+{% else %}
+    <h1>Join a meeting</h1>
+    <p class="muted">
+        Enter a meeting code below to join as a guest or
+        <a href="{% url 'accounts:register' %}">register</a> /
+        <a href="{% url 'accounts:login' %}">log in</a> to create your own meetings.
+    </p>
+{% endif %}
 
 <div class="dash-grid">
-    <section class="card">
-        <h2>Start a meeting</h2>
-        <form method="post" action="{% url 'meetings:create' %}">
-            {% csrf_token %}
-            <div class="field">
-                <label for="id_name">Room name (optional)</label>
-                <input type="text" name="name" id="id_name" maxlength="120" placeholder="Weekly sync">
-            </div>
-            <button type="submit">Create room</button>
-        </form>
-    </section>
+    {% if user.is_authenticated %}
+        <section class="card">
+            <h2>Start a meeting</h2>
+            <form method="post" action="{% url 'meetings:create' %}">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="id_name">Room name (optional)</label>
+                    <input type="text" name="name" id="id_name" maxlength="120" placeholder="Weekly sync">
+                </div>
+                <button type="submit">Create room</button>
+            </form>
+        </section>
+    {% endif %}
 
     <section class="card">
         <h2>Join with code</h2>
@@ -31,19 +42,49 @@
     </section>
 </div>
 
-<section class="card recent">
-    <h2>Recent rooms</h2>
-    {% if recent_rooms %}
-        <ul class="room-list">
-            {% for r in recent_rooms %}
-                <li>
-                    <a href="{% url 'meetings:room' code=r.code %}">{{ r }}</a>
-                    <span class="meta">code <code>{{ r.code }}</code> · host {{ r.host.username }} · {{ r.created_at|date:"Y-m-d H:i" }}</span>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="muted">No rooms yet. Create one above or join with a code.</p>
-    {% endif %}
-</section>
+{% if user.is_authenticated %}
+    <section class="card recent">
+        <h2>Recent rooms</h2>
+        <p class="muted small">Rooms you've joined as a participant.</p>
+        {% if recent_rooms %}
+            <ul class="room-list">
+                {% for r in recent_rooms %}
+                    <li>
+                        <div class="room-row">
+                            <a href="{% url 'meetings:room' code=r.code %}">{{ r }}</a>
+                        </div>
+                        <span class="meta">code <code>{{ r.code }}</code> · host {{ r.host.username }} · {{ r.created_at|date:"Y-m-d H:i" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">You haven't joined any rooms yet. Use a code above to join one.</p>
+        {% endif %}
+    </section>
+
+    <section class="card recent">
+        <h2>My meetings</h2>
+        <p class="muted small">Meetings you created. You can re-enter or delete them.</p>
+        {% if my_rooms %}
+            <ul class="room-list">
+                {% for r in my_rooms %}
+                    <li>
+                        <a href="{% url 'meetings:room' code=r.code %}">{{ r }}</a>
+                        <span class="meta">code <code>{{ r.code }}</code> · {{ r.created_at|date:"Y-m-d H:i" }}</span>
+                        <div class="room-actions">
+                            <form method="post" action="{% url 'meetings:delete' code=r.code %}"
+                                  class="inline-form room-delete"
+                                  onsubmit="return confirm('Delete this meeting? Anyone currently in the call will be kicked.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-danger-ghost" title="Delete meeting">Delete</button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">You haven't created any meetings yet. Use “Start a meeting” above.</p>
+        {% endif %}
+    </section>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Join {{ room }} · e2e_meet{% endblock %}
+
+{% block content %}
+<div class="auth-card guest-landing">
+    <h1>Join “{{ room }}”</h1>
+    <p class="muted small">code <code>{{ room.code }}</code> · host {{ room.host.username }}</p>
+    <p class="muted">
+        You're not signed in. Enter a display name to ask the host to let you in,
+        or <a href="{% url 'accounts:login' %}?next=/r/{{ room.code }}/">log in</a>.
+    </p>
+    <form method="post" action="{% url 'meetings:guest_join' code=room.code %}">
+        {% csrf_token %}
+        <div class="field">
+            <label for="id_guest_name">Your name</label>
+            <input type="text" name="name" id="id_guest_name"
+                   maxlength="80" required autofocus
+                   placeholder="e.g. Sam">
+        </div>
+        <button type="submit">Ask to join</button>
+    </form>
+</div>
+{% endblock %}
