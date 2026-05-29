@@ -20,7 +20,33 @@
     const input = document.getElementById("chat-input");
     const list  = document.getElementById("chat-messages");
     const sendBtn = form?.querySelector("button[type='submit']");
+    const chatPanel = document.getElementById("chat-panel");
+    const badge = document.getElementById("chat-count");
+    const myName = document.querySelector(".room")?.dataset.displayName || "";
     if (!form || !input || !list) return;
+
+    // Unread badge on the Chat control button. Bumps on incoming messages
+    // when the panel is closed; resets when the panel opens.
+    let unread = 0;
+    function paintBadge() {
+        if (!badge) return;
+        if (unread > 0) {
+            badge.textContent = unread > 99 ? "99+" : String(unread);
+            badge.hidden = false;
+        } else {
+            badge.hidden = true;
+        }
+    }
+    if (chatPanel) {
+        // Reset on every open. MutationObserver runs regardless of which code
+        // path opened the panel (toggle button, close button, future shortcuts).
+        new MutationObserver(() => {
+            if (chatPanel.classList.contains("is-open")) {
+                unread = 0;
+                paintBadge();
+            }
+        }).observe(chatPanel, { attributes: true, attributeFilter: ["class"] });
+    }
 
     // Enable input + button once the WS opens (chat works even if camera was denied).
     function setEnabled(enabled) {
@@ -50,6 +76,15 @@
         list.querySelector(".chat-empty")?.remove();
         list.appendChild(buildMessageItem(author, body, ts));
         list.scrollTop = list.scrollHeight;
+
+        // Bump the unread badge only when the panel is closed and the message
+        // isn't from this user. (Two participants with the same display name
+        // would shadow each other here — acceptable v1 edge case.)
+        const panelOpen = chatPanel?.classList.contains("is-open");
+        if (!panelOpen && author !== myName) {
+            unread++;
+            paintBadge();
+        }
     });
 
     function buildMessageItem(author, body, isoTs) {
